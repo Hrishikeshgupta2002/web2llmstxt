@@ -290,7 +290,6 @@ MIT License - Feel free to use, modify, and distribute.
 
 ## 🙏 Credits
 
-- Based on [create-llmstxt-py](https://github.com/mendableai/create-llmstxt-py) by Mendable AI
 - Powered by [Crawl4AI](https://github.com/unclecode/crawl4ai)
 - Enhanced with [Ollama](https://ollama.ai) and [Google Gemini](https://ai.google.dev)
 
