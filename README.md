@@ -1,342 +1,299 @@
-# 🚀 Enhanced LLMs.txt Generator with Crawl4AI
+# Crawl4AI LLMs.txt Generator
 
-[![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
-[![Crawl4AI](https://img.shields.io/badge/crawl4ai-0.6.0+-green.svg)](https://github.com/unclecode/crawl4ai)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+A powerful Python script that generates `llms.txt` and `llms-full.txt` files for any website using **Crawl4AI** and either **Ollama** (local) or **Gemini** (cloud) AI models.
 
-An advanced, production-ready tool for generating comprehensive `llms.txt` and `llms-full.txt` files from any website using **Crawl4AI** and **local/cloud AI models**. Built with 20+ years of software engineering expertise for enterprise-grade performance and reliability.
+This is an enhanced, reverse-engineered version based on [Firecrawl LLMs.txt Generator](https://github.com/mendableai/create-llmstxt-py) with significant improvements and modern AI integration.
 
-## 🌟 Key Features
+## 🚀 Features
 
-### 🎯 **Deep Website Crawling**
-- **Multi-Wave Discovery**: 5-wave deep crawling with intelligent link prioritization
-- **Enhanced Link Extraction**: Navigation menus, JavaScript data attributes, structured content
-- **Documentation-Aware**: Special handling for docs sites with deeper nesting (up to 10 levels)
-- **Smart Filtering**: Automatically prioritizes documentation, guides, and valuable content
+### 🔧 Enhanced AI Integration
+- **Ollama Support**: Full local LLM support with automatic model detection
+- **Gemini Support**: Google's latest Gemini models with advanced configuration
+- **Smart Model Selection**: Automatically detects and uses the best available model
+- **Model Listing**: View all available models for your chosen provider
 
-### 🧠 **AI-Powered Content Processing**
-- **Dual AI Support**: Ollama (local) and Gemini (cloud) models
-- **Anti-Hallucination System**: Extracts real content instead of generating fictional descriptions
-- **Smart Caching**: Intelligent description caching with content change detection
-- **Fallback Mechanisms**: Robust error handling with 5 retry attempts
+### 🕸️ Advanced Web Crawling
+- **Crawl4AI Powered**: Uses the latest Crawl4AI for robust, browser-based scraping
+- **Deep Crawling**: Automatic website discovery with BFS (Breadth-First Search)
+- **JavaScript Support**: Full support for dynamic, JavaScript-heavy websites
+- **Smart Content Extraction**: AI-optimized markdown generation
 
-### 🔧 **Production-Grade Features**
-- **Parallel Processing**: Configurable batch processing with worker pools
-- **Memory Optimization**: RAM usage warnings and conservative settings for large models
-- **Timeout Handling**: Adaptive timeouts (45s local, 30s cloud) with exponential backoff
-- **Session Management**: Proper browser session cleanup and resource management
+### 🎯 Professional Output
+- **Clean Markdown**: LLM-ready content with intelligent filtering
+- **Structured Data**: JSON-based title and description generation
+- **Batch Processing**: Efficient concurrent processing of multiple URLs
+- **Error Handling**: Robust error recovery and logging
 
-### 📊 **Enhanced Content Cleaning**
-- **Multi-Method Title Extraction**: HTML tags, headers, URL slugs with normalization
-- **Advanced Sentence Filtering**: Removes navigation text, UI elements, and irrelevant content
-- **Content Type Detection**: Automatic categorization (docs, pricing, features, etc.)
-- **Text Polishing**: LLM-based text cleaning without content generation
+## 📋 Requirements
 
-## 🚀 Quick Start
+- Python 3.8+
+- Crawl4AI v0.6.0+
+- Either Ollama (local) or Gemini API access
 
-### Prerequisites
+## 🛠️ Installation
+
+### 1. Clone and Setup
 
 ```bash
-# Install Python 3.8+
-python --version
-
-# Install required packages
-pip install crawl4ai asyncio requests python-dotenv pydantic tenacity psutil
+git clone <repository-url>
+cd crawl4ai-llmstxt-generator
+pip install -r requirements-crawl4ai.txt
 ```
 
-### Basic Usage
+### 2. Install Crawl4AI
 
 ```bash
-# Interactive mode (recommended for first-time users)
-python generate-llmstxt-crawl4ai.py
+# Install Crawl4AI
+pip install crawl4ai
 
-# Direct command line usage
-python generate-llmstxt-crawl4ai.py https://docs.crawl4ai.com/
+# Setup browsers (required)
+crawl4ai-setup
 
-# Deep crawling with more pages
-python generate-llmstxt-crawl4ai.py https://docs.crawl4ai.com/ --max-urls 100
+# Verify installation
+crawl4ai-doctor
+```
+
+### 3. Setup AI Provider
+
+#### Option A: Ollama (Local, Free)
+
+```bash
+# Install Ollama
+# Visit https://ollama.ai for installation instructions
+
+# Pull a model (choose one or more)
+ollama pull llama3.2          # Recommended: Latest Llama
+ollama pull qwen2.5:7b        # Alternative: Qwen 2.5
+ollama pull gemma2            # Alternative: Google Gemma
+ollama pull mistral           # Alternative: Mistral
+```
+
+#### Option B: Gemini (Cloud, Paid)
+
+1. Get a Gemini API key from [Google AI Studio](https://aistudio.google.com/app/apikey)
+2. Set your API key:
+
+```bash
+export GEMINI_API_KEY="your_api_key_here"
+# Or create a .env file (see env.example.crawl4ai)
+```
+
+## 🚀 Usage
+
+### Basic Examples
+
+```bash
+# Using Ollama (auto-detects best model)
+python generate-llmstxt-crawl4ai.py https://docs.crawl4ai.com
+
+# Using Gemini
+python generate-llmstxt-crawl4ai.py https://docs.crawl4ai.com --llm-provider gemini
+
+# Process more URLs
+python generate-llmstxt-crawl4ai.py https://python.org --max-urls 50
 ```
 
 ### Advanced Usage
 
 ```bash
-# Use specific AI model
-python generate-llmstxt-crawl4ai.py https://docs.crawl4ai.com/ \
+# List available models
+python generate-llmstxt-crawl4ai.py --list-models --llm-provider ollama
+python generate-llmstxt-crawl4ai.py --list-models --llm-provider gemini
+
+# Specify exact model
+python generate-llmstxt-crawl4ai.py https://github.com \
   --llm-provider ollama \
-  --ollama-model deepseek-r1:latest \
-  --max-urls 50
+  --ollama-model "qwen2.5:7b"
 
-# Export as JSON with parallel processing
-python generate-llmstxt-crawl4ai.py https://docs.crawl4ai.com/ \
-  --format json \
-  --batch-size 15 \
-  --max-urls 100
+# Custom Gemini model
+python generate-llmstxt-crawl4ai.py https://github.com \
+  --llm-provider gemini \
+  --gemini-model "gemini-1.5-pro"
 
-# Full text only mode (no AI descriptions)
-python generate-llmstxt-crawl4ai.py https://docs.crawl4ai.com/ \
-  --no-full-text \
-  --max-urls 200
+# Custom output directory
+python generate-llmstxt-crawl4ai.py https://fastapi.tiangolo.com \
+  --output-dir ./crawled-sites \
+  --max-urls 30 \
+  --verbose
+
+# Only generate index (no full text)
+python generate-llmstxt-crawl4ai.py https://example.com --no-full-text
 ```
 
-## 🛠️ Configuration
+## 🧠 Supported Models
 
-### Environment Variables
+### Ollama Models (Local)
+- **llama3.2** ⭐ (Recommended)
+- **llama3.1**
+- **qwen2.5** series (1.5B, 7B, 14B)
+- **mistral**
+- **mixtral**
+- **codellama**
+- **phi3**
+- **gemma2**
+- *And many more...*
 
-Create a `.env` file in your project directory:
+### Gemini Models (Cloud)
+- **gemini-1.5-flash** ⭐ (Recommended - fast & affordable)
+- **gemini-1.5-flash-8b**
+- **gemini-1.5-pro** (More capable, higher cost)
+- **gemini-2.0-flash-exp** (Latest experimental)
+- **gemini-exp-1114**
+- **gemini-exp-1121**
+
+## 📊 Command Line Options
+
+| Option | Description | Default |
+|--------|-------------|---------|
+| `url` | Website URL to process | Required |
+| `--max-urls` | Maximum URLs to process | 20 |
+| `--output-dir` | Output directory | Current directory |
+| `--llm-provider` | AI provider (ollama/gemini) | ollama |
+| `--ollama-model` | Specific Ollama model | Auto-detect |
+| `--ollama-url` | Ollama server URL | http://localhost:11434 |
+| `--gemini-api-key` | Gemini API key | From GEMINI_API_KEY env |
+| `--gemini-model` | Specific Gemini model | gemini-1.5-flash |
+| `--no-full-text` | Skip full text generation | False |
+| `--verbose` | Enable detailed logging | False |
+| `--list-models` | List available models | False |
+
+## 📁 Output Format
+
+### llms.txt (Index)
+```
+# https://example.com llms.txt
+
+- [Getting Started Guide](https://example.com/guide): Complete tutorial for new users getting started
+- [API Documentation](https://example.com/api): Comprehensive reference for developers using the API
+- [Advanced Features](https://example.com/advanced): In-depth coverage of advanced functionality and configuration
+```
+
+### llms-full.txt (Complete Content)
+```
+# https://example.com llms-full.txt
+
+<|crawl4ai-page-1-lllmstxt|>
+## Getting Started Guide
+Full markdown content of the getting started guide...
+
+<|crawl4ai-page-2-lllmstxt|>
+## API Documentation
+Complete API documentation in markdown format...
+```
+
+## 🔧 Configuration
+
+Create a `.env` file based on `env.example.crawl4ai`:
 
 ```env
-# AI Model Configuration
-OLLAMA_BASE_URL=http://localhost:11434
-GEMINI_API_KEY=your_api_key_here
+# Gemini API Configuration
+GEMINI_API_KEY=your_gemini_api_key_here
 
-# Performance Settings
-MAX_GEN_OUTPUT_TOKENS=1024
-DEFAULT_PARALLEL_WORKERS=3
-CACHE_DESCRIPTIONS=true
+# Ollama Configuration (optional)
+OLLAMA_BASE_URL=http://localhost:11434
 
 # Output Configuration
 OUTPUT_DIR=./output
 ```
 
-### Model Selection
+## 🎯 GitHub Extensions and Ollama
 
-#### Ollama (Local Models)
-```bash
-# List available models
-python generate-llmstxt-crawl4ai.py --list-models --llm-provider ollama
+**Yes!** This tool works excellently with GitHub/VS Code extensions:
 
-# Popular models for different use cases:
-# - Fast: phi:2.7b (1.5GB RAM)
-# - Balanced: gemma3:4b (3.1GB RAM)
-# - High Quality: deepseek-r1:latest (4.4GB RAM)
-```
+### Recommended Extensions:
+1. **Continue.dev** - Works with both Ollama and cloud models
+2. **GitHub Copilot** - Can be supplemented with local Ollama
+3. **Codeium** - Supports various model providers
+4. **Ollama Extension** - Direct VS Code integration with Ollama
 
-#### Gemini (Cloud Models)
-```bash
-# List available Gemini models
-python generate-llmstxt-crawl4ai.py --list-models --llm-provider gemini
+### Integration Tips:
+- Use `ollama list` to see your installed models
+- Most extensions auto-detect local Ollama installation
+- The generated `llms.txt` files work perfectly as context for any LLM
 
-# Set API key
-export GEMINI_API_KEY="your_api_key_here"
-```
+## 🚀 Performance Tips
 
-## 📁 Output Files
+### For Ollama
+- **Model Size**: Larger models (7B+) give better results but need more RAM
+- **GPU**: Use CUDA/Metal for faster inference
+- **Multiple Models**: Install 2-3 different models for comparison
 
-The tool generates multiple output formats:
+### For Gemini
+- **Rate Limits**: Gemini Flash has generous limits for most use cases
+- **Cost**: Flash is very affordable (~$0.075/1M tokens)
+- **Quality**: Pro models give better results for complex content
 
-### Standard Output (`llms.txt`)
-```
-# https://docs.crawl4ai.com/ llms.txt
-# Generated on 2025-06-26T20:25:44 using ollama:deepseek-r1:latest
-# Total pages: 47
-# Processing time: 156.3s
+### General
+- **Batch Size**: Increase `--max-urls` for comprehensive site mapping
+- **Parallel Processing**: Script automatically handles concurrent requests
+- **Caching**: Crawl4AI automatically caches results for efficiency
 
-- [Quick Start](https://docs.crawl4ai.com/quick-start): Getting started guide for Crawl4AI
-- [API Reference](https://docs.crawl4ai.com/api): Complete API documentation
-- [Deep Crawling](https://docs.crawl4ai.com/core/deep-crawling): Advanced crawling techniques
-```
-
-### Full Content (`llms-full.txt`)
-Complete page content with metadata for each discovered page.
-
-### Clean Version (`llms-full-clean.txt`)
-Polished content with enhanced formatting and navigation removal.
-
-### Structured Data (`llms.json`, `llms.yaml`)
-Machine-readable formats with metadata and statistics.
-
-## 🎛️ Command Line Options
-
-### Basic Options
-```bash
---max-urls NUMBER          # Maximum pages to crawl (default: 20)
---llm-provider PROVIDER     # AI provider: ollama, gemini (default: ollama)
---format FORMAT             # Output format: text, json, yaml (default: text)
---output-dir DIR            # Output directory (default: ./output)
-```
-
-### AI Model Options
-```bash
---ollama-model MODEL        # Specific Ollama model
---ollama-url URL           # Ollama server URL
---gemini-api-key KEY       # Gemini API key
---gemini-model MODEL       # Specific Gemini model
-```
-
-### Performance Options
-```bash
---batch-size SIZE          # Pages per batch (default: 10)
---max-full-pages NUMBER    # Limit full text pages
---no-parallel-crawl        # Disable parallel processing
---no-cache                 # Disable description caching
-```
-
-### Advanced Options
-```bash
---verbose                  # Detailed logging
---quiet                    # Minimal output
---no-full-text            # Skip full text generation
---create-env               # Create sample .env file
-```
-
-## 🏗️ Architecture
-
-### Deep Crawling System
-1. **Initial Discovery**: Extract links from main page using 4 methods
-2. **Wave-Based Crawling**: Process pages in waves, discovering new links
-3. **Link Prioritization**: Score and sort links by content value
-4. **Smart Filtering**: Documentation-aware URL validation
-
-### Content Processing Pipeline
-1. **Enhanced Extraction**: Multi-method title and content extraction
-2. **Content Cleaning**: Remove navigation, UI elements, and noise
-3. **AI Processing**: Use LLM for text polishing (not generation)
-4. **Quality Validation**: Anti-hallucination checks and content verification
-
-### Performance Optimizations
-- **Parallel Processing**: Configurable worker pools for concurrent operations
-- **Intelligent Caching**: Content-based caching with change detection
-- **Memory Management**: RAM usage monitoring and optimization
-- **Timeout Handling**: Adaptive timeouts with exponential backoff
-
-## 🔧 Troubleshooting
+## 🔍 Troubleshooting
 
 ### Common Issues
 
-#### Ollama Connection Issues
+#### Ollama Connection Failed
 ```bash
 # Check if Ollama is running
-curl http://localhost:11434/api/version
+ollama list
 
-# Start Ollama server
+# Start Ollama if needed
 ollama serve
+
+# Test connection
+curl http://localhost:11434/api/tags
 ```
 
-#### Memory Issues
+#### Crawl4AI Browser Issues
 ```bash
-# Use smaller models for limited RAM
-python generate-llmstxt-crawl4ai.py URL --ollama-model phi:2.7b
+# Reinstall browsers
+crawl4ai-setup
 
-# Reduce batch size
-python generate-llmstxt-crawl4ai.py URL --batch-size 5
+# Manual browser installation
+python -m playwright install chromium --with-deps
 ```
 
-#### Slow Performance
+#### Permission/Path Issues
 ```bash
-# Reduce parallel workers
-python generate-llmstxt-crawl4ai.py URL --batch-size 5
+# Check Python path
+which python
 
-# Disable caching for testing
-python generate-llmstxt-crawl4ai.py URL --no-cache
+# Install in virtual environment
+python -m venv venv
+source venv/bin/activate  # Linux/Mac
+# venv\Scripts\activate   # Windows
+pip install -r requirements-crawl4ai.txt
 ```
 
-### Debug Mode
-```bash
-# Enable verbose logging
-python generate-llmstxt-crawl4ai.py URL --verbose
+## 🆚 Comparison with Original
 
-# Check log file
-tail -f llmstxt_generator.log
-```
-
-## 🧪 Examples
-
-### Documentation Sites
-```bash
-# Crawl API documentation
-python generate-llmstxt-crawl4ai.py https://docs.crawl4ai.com/ --max-urls 100
-
-# Python documentation
-python generate-llmstxt-crawl4ai.py https://docs.python.org/ --max-urls 150
-```
-
-### Company Websites
-```bash
-# Corporate site with product info
-python generate-llmstxt-crawl4ai.py https://openai.com/ --max-urls 50
-
-# Export as structured data
-python generate-llmstxt-crawl4ai.py https://anthropic.com/ --format json
-```
-
-### Blog and Content Sites
-```bash
-# Technical blogs
-python generate-llmstxt-crawl4ai.py https://blog.openai.com/ --max-urls 75
-
-# News sites
-python generate-llmstxt-crawl4ai.py https://techcrunch.com/ --max-urls 100
-```
-
-## 🛡️ Features for Enterprise Use
-
-### Security & Privacy
-- **Local Processing**: Keep sensitive data on-premises with Ollama
-- **No API Lock-in**: Switch between providers without vendor dependency
-- **Session Isolation**: Proper cleanup and resource management
-
-### Scalability
-- **Configurable Limits**: Adjust crawling depth and breadth
-- **Batch Processing**: Handle large sites efficiently
-- **Resource Monitoring**: RAM usage warnings and optimization
-
-### Reliability
-- **Comprehensive Error Handling**: 5-level retry mechanism
-- **Fallback Systems**: Multiple extraction methods for robustness
-- **Quality Assurance**: Anti-hallucination validation
-
-## 📈 Performance Benchmarks
-
-### Typical Performance (Local Models)
-- **Small Sites (10-20 pages)**: 30-60 seconds
-- **Medium Sites (50-100 pages)**: 2-5 minutes  
-- **Large Sites (200+ pages)**: 10-20 minutes
-
-### Resource Usage
-- **RAM**: 2-8GB depending on model size
-- **CPU**: Moderate usage with efficient parallel processing
-- **Network**: Optimized with intelligent caching
-
-## 🤝 Contributing
-
-### Development Setup
-```bash
-# Clone repository
-git clone https://github.com/your-repo/llmstxt-generator
-cd llmstxt-generator
-
-# Install dependencies
-pip install -r requirements.txt
-
-# Run tests
-python -m pytest tests/
-```
-
-### Code Style
-- Follow PEP 8 standards
-- Use type hints for all functions
-- Include comprehensive docstrings
-- Add logging for debugging
+| Feature | Original (Firecrawl) | This Version (Crawl4AI) |
+|---------|---------------------|------------------------|
+| Web Scraping | Firecrawl API | Crawl4AI (Local) |
+| AI Provider | OpenAI only | Ollama + Gemini |
+| Cost | API costs for both | Free (Ollama) or Low (Gemini) |
+| Models | GPT-4 only | 10+ model options |
+| Privacy | Cloud-based | Can be fully local |
+| Setup | API keys required | Works offline with Ollama |
+| Performance | Network dependent | Local processing available |
 
 ## 📄 License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+MIT License - Feel free to use, modify, and distribute.
 
-## 🙏 Acknowledgments
+## 🤝 Contributing
 
-- **[Crawl4AI](https://github.com/unclecode/crawl4ai)**: Powerful web crawling engine
-- **[Ollama](https://ollama.ai/)**: Local AI model serving
-- **[Google Gemini](https://gemini.google.com/)**: Cloud AI services
-- **Community**: Contributors and users providing feedback
+1. Fork the repository
+2. Create a feature branch
+3. Add your improvements
+4. Submit a pull request
+
+## 🙏 Credits
+
+- Based on [create-llmstxt-py](https://github.com/mendableai/create-llmstxt-py) by Mendable AI
+- Powered by [Crawl4AI](https://github.com/unclecode/crawl4ai)
+- Enhanced with [Ollama](https://ollama.ai) and [Google Gemini](https://ai.google.dev)
 
 ---
 
-## 🚀 Getting Started Today
-
-1. **Install Dependencies**: `pip install crawl4ai asyncio requests python-dotenv`
-2. **Run Interactive Mode**: `python generate-llmstxt-crawl4ai.py`
-3. **Choose Your Site**: Enter any website URL
-4. **Select AI Model**: Pick from available Ollama/Gemini models
-5. **Generate Content**: Watch as it discovers and processes pages
-
-**Ready to transform any website into AI-friendly content? Start crawling!** 🕷️✨ 
+**Happy Crawling!** 🕸️✨ 
