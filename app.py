@@ -1844,7 +1844,7 @@ class LLMsTxtGenerator:
             return extracted_text
         
         # Use LLM only to clean the extracted text
-        clean_prompt = f"""Clean this text. Remove extra words, fix grammar, make it 15-20 words. Use only the information given:
+        clean_prompt = f"""Clean this text. Remove extra words, fix grammar, make it 15-20 words. Use only the information given and make it descriptive 
 
 {extracted_text}
 
@@ -2111,9 +2111,11 @@ Cleaned text:"""
                 pages = await self.crawler.discover_all_links_first(base_url, actual_max_pages, calculated_safety_limit, comprehensive=True)
             else:
                 logger.info("🎯 Using systematic discovery-first crawling strategy")
-                # Regular systematic crawling with normal limits
-                logger.info(f"📊 Regular mode: Targeting {actual_max_pages} high-quality pages")
-                pages = await self.crawler.discover_all_links_first(base_url, actual_max_pages, actual_max_pages, comprehensive=False)
+                # Use comprehensive crawling for better content coverage in normal mode too
+                logger.info(f"📊 Regular mode: Comprehensive crawling targeting {actual_max_pages} high-quality pages")
+                calculated_safety_limit = safety_limit or (actual_max_pages * 5)  # Less aggressive than full-text mode
+                logger.info(f"🛡️ Safety limit set to {calculated_safety_limit} pages for comprehensive crawling")
+                pages = await self.crawler.discover_all_links_first(base_url, actual_max_pages, calculated_safety_limit, comprehensive=True)
         else:
             logger.info("🌊 Using BestFirst deep crawling strategy")
             pages = await self.crawler.crawl_website(base_url, actual_max_pages)
@@ -2245,15 +2247,57 @@ Cleaned text:"""
         if not full_text_only:
             llms_filename = os.path.join(self.output_dir, f'{domain}-llms.txt')
             with open(llms_filename, 'w', encoding='utf-8') as f:
-                f.write(f"# {base_url} llms.txt\n")
-                f.write(f"# Generated on {metadata['generated_at']} using {metadata['model_used']}\n")
-                f.write(f"# Total pages: {metadata['total_pages']}\n")
-                f.write(f"# Processing time: {metadata['processing_time_seconds']}s\n\n")
+                # H1 header with site name (required by spec)
+                site_name = self._extract_site_name(base_url, pages)
+                f.write(f"# {site_name}\n\n")
                 
-                for entry in llms_entries:
-                    f.write(f"- [{entry['title']}]({entry['url']}): {entry['description']}\n")
+                # Blockquote with site summary (recommended by spec)
+                site_summary = self._generate_site_summary(pages)
+                f.write(f"> {site_summary}\n\n")
+                
+                # Optional details section
+                f.write(f"Generated from {metadata['total_pages']} pages on {metadata['generated_at'].split('T')[0]} using automated crawling.\n\n")
+                
+                # Categorize entries by content type
+                categorized_entries = self._categorize_entries(llms_entries, pages)
+                
+                # Write H2 sections with categorized links
+                for category, entries in categorized_entries.items():
+                    if entries:  # Only write section if it has entries
+                        f.write(f"## {category}\n\n")
+                        
+                        for entry in entries:
+                            # Find the corresponding page content for this entry
+                            page_content = ""
+                            for page in pages:
+                                if page.get('url') == entry['url']:
+                                    # Get raw content and clean it up
+                                    raw_content = page.get('content', '')
+                                    # Clean HTML/markdown and extract meaningful text
+                                    import re
+                                    # Remove HTML tags, links, and markdown
+                                    cleaned = re.sub(r'<[^>]+>', '', raw_content)  # Remove HTML
+                                    cleaned = re.sub(r'!\[[^\]]*\]\([^)]*\)', '', cleaned)  # Remove images
+                                    cleaned = re.sub(r'\[[^\]]*\]\([^)]*\)', '', cleaned)  # Remove links
+                                    cleaned = re.sub(r'[#*_`]', '', cleaned)  # Remove markdown
+                                    # Take meaningful content, skip navigation/header stuff
+                                    lines = [line.strip() for line in cleaned.split('\n') if line.strip()]
+                                    meaningful_content = []
+                                    for line in lines:
+                                        if len(line) > 30 and not any(skip in line.lower() for skip in ['logo', 'navigation', 'menu', 'skip to']):
+                                            meaningful_content.append(line)
+                                        if len(' '.join(meaningful_content)) > 150:
+                                            break
+                                    page_content = ' '.join(meaningful_content)[:200] + ("..." if len(' '.join(meaningful_content)) > 200 else "")
+                                    break
+                            
+                            # Use raw content instead of AI description
+                            content_to_show = page_content if page_content else entry.get('description', 'No content available')
+                            f.write(f"- [{entry['title']}]({entry['url']}): {content_to_show}\n")
+                        
+                        f.write("\n")  # Add spacing between sections
             
-            logger.info(f"📄 Created llms.txt: {llms_filename}")
+            logger.info(f"📄 Created llms.txt following official spec: {llms_filename}")
         
         # Generate llms-full.txt (if include_full_text is True OR full_text_only is True)
         if include_full_text or full_text_only:
@@ -2460,6 +2504,92 @@ Cleaned text:"""
         
         print(f"\n📚 Reference: https://docs.crawl4ai.com/core/deep-crawling/")
         print("=" * 60)
+
+    def _extract_site_name(self, base_url: str, pages: List[Dict]) -> str:
+        """Extract a clean site name following llms.txt specification"""
+        # Try to get from the main page title first
+        if pages:
+            main_page = next((page for page in pages if page.get('url') == base_url or page.get('url') == base_url.rstrip('/')), None)
+            if main_page and main_page.get('title'):
+                title = main_page['title']
+                # Clean common title patterns
+                title = title.split('|')[0].split('-')[0].strip()
+                if title and len(title) > 3:
+                    return title
+        
+        # Fallback to domain name
+        import urllib.parse
+        parsed = urllib.parse.urlparse(base_url)
+        domain = parsed.netloc.replace('www.', '')
+        return domain.split('.')[0].title()
+    
+    def _generate_site_summary(self, pages: List[Dict]) -> str:
+        """Generate a concise site summary for the blockquote section"""
+        if not pages:
+            return "A website with various content and resources."
+        
+        # Look for common patterns in page content to determine site type
+        all_content = ' '.join([page.get('content', '')[:500].lower() for page in pages[:5]])  # First 5 pages
+        
+        # Detect site type based on content patterns
+        if any(keyword in all_content for keyword in ['api', 'documentation', 'docs', 'developer', 'reference']):
+            return "Documentation and developer resources for software tools and APIs."
+        elif any(keyword in all_content for keyword in ['pricing', 'plans', 'subscription', 'buy', 'purchase']):
+            return "Software and service marketplace with pricing information and tool comparisons."
+        elif any(keyword in all_content for keyword in ['blog', 'article', 'news', 'post']):
+            return "Blog and articles covering various topics and insights."
+        elif any(keyword in all_content for keyword in ['tutorial', 'guide', 'how to', 'learn']):
+            return "Educational content with tutorials and learning resources."
+        elif any(keyword in all_content for keyword in ['product', 'service', 'solution', 'tool']):
+            return "Product and service information with detailed descriptions and features."
+        else:
+            return "A comprehensive website with information, resources, and various content sections."
+    
+    def _categorize_entries(self, llms_entries: List[Dict], pages: List[Dict]) -> Dict[str, List[Dict]]:
+        """Categorize entries into logical sections following llms.txt best practices"""
+        categories = {
+            "Documentation": [],
+            "Products & Services": [],
+            "Resources": [],
+            "API & Technical": [],
+            "Optional": []
+        }
+        
+        for entry in llms_entries:
+            url_lower = entry['url'].lower()
+            title_lower = entry['title'].lower()
+            
+            # Find corresponding page content for better categorization
+            page_content = ""
+            for page in pages:
+                if page.get('url') == entry['url']:
+                    page_content = page.get('content', '')[:300].lower()
+                    break
+            
+            # Categorize based on URL patterns and content
+            if any(keyword in url_lower for keyword in ['/docs', '/documentation', '/api', '/reference']):
+                categories["API & Technical"].append(entry)
+            elif any(keyword in url_lower for keyword in ['/guide', '/tutorial', '/help', '/support']):
+                categories["Documentation"].append(entry)
+            elif any(keyword in page_content for keyword in ['api', 'endpoint', 'developer', 'code', 'technical']):
+                categories["API & Technical"].append(entry)
+            elif any(keyword in page_content for keyword in ['pricing', 'plans', 'product', 'service', 'tool']):
+                categories["Products & Services"].append(entry)
+            elif any(keyword in url_lower for keyword in ['/blog', '/news', '/article', '/resources']):
+                categories["Resources"].append(entry)
+            elif any(keyword in url_lower for keyword in ['?page=', '/page/', '/compare', '/vs']):
+                categories["Optional"].append(entry)  # Secondary pages
+            else:
+                # Default to main sections based on content hints
+                if 'pricing' in page_content or 'product' in page_content:
+                    categories["Products & Services"].append(entry)
+                elif 'documentation' in page_content or 'guide' in page_content:
+                    categories["Documentation"].append(entry)
+                else:
+                    categories["Resources"].append(entry)
+        
+        # Remove empty categories
+        return {k: v for k, v in categories.items() if v}
 
 def create_sample_env_file():
     """Create a sample .env file for users to reference"""
