@@ -799,6 +799,309 @@ class WebCrawler:
         self.session_data = {}
         self.session_id = f"llmstxt_session_{int(time.time())}"
         
+    async def discover_all_links_first(self, base_url: str, max_pages: int = 50, safety_limit: int = None, comprehensive: bool = False) -> List[Dict[str, Any]]:
+        """
+        Enhanced deep crawling strategy: Multi-level recursive link discovery and prioritization.
+        
+        Strategy:
+        1. Crawl main page and discover all links
+        2. Score and prioritize discovered links
+        3. In comprehensive mode: Crawl ALL discovered links recursively (for full text mode)
+        4. In regular mode: Crawl only high-priority pages up to max_pages limit
+        5. Continue until target reached or no new quality links found
+        
+        This ensures appropriate coverage based on the crawling mode.
+        """
+        try:
+            from crawl4ai import AsyncWebCrawler, CrawlerRunConfig, CacheMode
+            from crawl4ai.content_scraping_strategy import LXMLWebScrapingStrategy
+            import urllib.parse
+            
+            base_domain = urllib.parse.urlparse(base_url).netloc
+            all_discovered_links = set()
+            crawled_pages = []
+            crawled_urls = set()  # Track already crawled URLs to avoid duplicates
+            pages_to_explore = []  # Queue of pages to explore for more links
+            
+            logger.info(f"🚀 Enhanced Deep Crawling Strategy for: {base_url}")
+            logger.info(f"🎯 Target: {max_pages} pages with multi-level link discovery")
+            logger.info(f"🔍 Phase 1: Discovering all links on main page: {base_url}")
+            
+            # Phase 1: Crawl main page and discover all internal links
+            main_page_config = CrawlerRunConfig(
+                scraping_strategy=LXMLWebScrapingStrategy(),
+                word_count_threshold=10,  # Lower threshold for link discovery
+                page_timeout=30000,
+                cache_mode=CacheMode.BYPASS,
+                verbose=True
+            )
+            
+            async with AsyncWebCrawler(verbose=True) as crawler:
+                # Get the main page first
+                main_result = await crawler.arun(base_url, config=main_page_config)
+                
+                if main_result and main_result.success:
+                    # Extract main page content
+                    main_content = ""
+                    if hasattr(main_result, 'markdown') and main_result.markdown:
+                        main_content = main_result.markdown.fit_markdown or main_result.markdown.raw_markdown
+                    elif hasattr(main_result, 'cleaned_html') and main_result.cleaned_html:
+                        main_content = main_result.cleaned_html
+                    
+                    main_word_count = len(main_content.split()) if main_content else 0
+                    
+                    # Add main page to results
+                    crawled_pages.append({
+                        'url': main_result.url,
+                        'title': self._extract_title_v6(main_result),
+                        'content': main_content,
+                        'word_count': main_word_count,
+                        'score': 10.0,  # Give main page highest score
+                        'depth': 0,
+                        'session_id': self.session_id,
+                        'metadata': main_result.metadata or {},
+                        'crawl_timestamp': datetime.now().isoformat(),
+                        'discovery_phase': 'main_page'
+                    })
+                    
+                    logger.info(f"✅ Main page crawled: {main_word_count} words")
+                    crawled_urls.add(main_result.url)
+                    
+                    # Add main page to exploration queue for recursive link discovery
+                    pages_to_explore.append(main_result)
+                    
+                    # Extract all internal links from main page using enhanced discovery
+                    discovered_main_links = self._extract_all_links(main_result, base_url, base_domain)
+                    all_discovered_links.update(discovered_main_links)
+                    
+                    logger.info(f"🔗 Discovered {len(all_discovered_links)} unique internal links from main page")
+                    
+                    # Phase 2: Multi-level crawling (mode-dependent)
+                    if comprehensive:
+                        logger.info(f"🚀 Phase 2: COMPREHENSIVE multi-level crawling - targeting ALL links")
+                        max_depth = 5  # Increased depth for comprehensive coverage
+                        actual_safety_limit = safety_limit or (max_pages * 10)  # Use provided or calculated safety limit
+                    else:
+                        logger.info(f"🚀 Phase 2: Selective multi-level crawling - targeting best links")
+                        max_depth = 3  # Regular depth for selective crawling
+                        actual_safety_limit = max_pages  # Limit to requested page count
+                    
+                    current_depth = 1
+                    
+                    while current_depth <= max_depth and len(crawled_pages) < actual_safety_limit:
+                        logger.info(f"🌊 Crawling depth {current_depth} - Current pages: {len(crawled_pages)} | Safety limit: {actual_safety_limit}")
+                        
+                        # Get ALL uncrawled links for this depth level
+                        uncrawled_links = [url for url in all_discovered_links if url not in crawled_urls]
+                        
+                        if not uncrawled_links:
+                            logger.info(f"🔚 No more uncrawled links found at depth {current_depth}")
+                            break
+                        
+                        # Score and filter links based on crawling mode
+                        scored_links = []
+                        for link in uncrawled_links:
+                            score = self._score_url_importance(link, base_url)
+                            if comprehensive:
+                                # Comprehensive mode: Include ALL links (even low-scored ones)
+                                if score > 0.0:
+                                    scored_links.append((link, score))
+                            else:
+                                # Regular mode: Only include high-quality links
+                                if score > 1.0:  # Higher threshold for regular mode
+                                    scored_links.append((link, score))
+                        
+                        # Sort by score and determine how many to crawl
+                        scored_links.sort(key=lambda x: x[1], reverse=True)
+                        
+                        if comprehensive:
+                            links_to_crawl = scored_links  # Crawl ALL discovered links in comprehensive mode
+                        else:
+                            # Regular mode: limit to remaining page budget
+                            remaining_budget = actual_safety_limit - len(crawled_pages)
+                            links_to_crawl = scored_links[:remaining_budget]
+                        
+                        if not links_to_crawl:
+                            logger.info(f"🔚 No more links to crawl at depth {current_depth}")
+                            break
+                        
+                        if comprehensive:
+                            logger.info(f"📊 Depth {current_depth}: Crawling ALL {len(links_to_crawl)} discovered links (comprehensive)")
+                        else:
+                            logger.info(f"📊 Depth {current_depth}: Crawling {len(links_to_crawl)} highest-priority links (selective)")
+                        
+                        # Crawl ALL links at this depth level
+                        new_pages_found = 0
+                        for link, score in links_to_crawl:
+                            if len(crawled_pages) >= actual_safety_limit:
+                                logger.warning(f"🛑 Reached safety limit of {actual_safety_limit} pages. Stopping crawl.")
+                                break
+                            
+                            try:
+                                logger.info(f"🔄 [{len(crawled_pages)+1}] Depth {current_depth}: {link} (Score: {score:.2f})")
+                                
+                                link_result = await crawler.arun(link, config=main_page_config)
+                                crawled_urls.add(link)  # Mark as crawled regardless of success
+                                
+                                if link_result and link_result.success:
+                                    link_content = ""
+                                    if hasattr(link_result, 'markdown') and link_result.markdown:
+                                        link_content = link_result.markdown.fit_markdown or link_result.markdown.raw_markdown
+                                    elif hasattr(link_result, 'cleaned_html') and link_result.cleaned_html:
+                                        link_content = link_result.cleaned_html
+                                    
+                                    link_word_count = len(link_content.split()) if link_content else 0
+                                    
+                                    if link_word_count >= 50:  # Quality threshold
+                                        crawled_pages.append({
+                                            'url': link_result.url,
+                                            'title': self._extract_title_v6(link_result),
+                                            'content': link_content,
+                                            'word_count': link_word_count,
+                                            'score': score,
+                                            'depth': current_depth,
+                                            'session_id': self.session_id,
+                                            'metadata': link_result.metadata or {},
+                                            'crawl_timestamp': datetime.now().isoformat(),
+                                            'discovery_phase': f'depth_{current_depth}'
+                                        })
+                                        
+                                        new_pages_found += 1
+                                        logger.info(f"✅ [{len(crawled_pages)}] Added: {link_word_count} words | Score: {score:.2f} | Depth: {current_depth}")
+                                        
+                                        # Discover more links from this page for next depth level
+                                        if current_depth < max_depth:
+                                            new_links = self._extract_all_links(link_result, base_url, base_domain)
+                                            before_count = len(all_discovered_links)
+                                            all_discovered_links.update(new_links)
+                                            after_count = len(all_discovered_links)
+                                            
+                                            if after_count > before_count:
+                                                if comprehensive:
+                                                    logger.debug(f"🔗 Found {after_count - before_count} new links from {link} (comprehensive mode)")
+                                                else:
+                                                    logger.debug(f"🔗 Found {after_count - before_count} new links from {link} (selective mode)")
+                                    else:
+                                        logger.debug(f"⏭️ Skipping low-content page ({link_word_count} words): {link}")
+                                else:
+                                    logger.warning(f"❌ Failed to crawl {link}: {link_result.error_message if link_result else 'No result'}")
+                            
+                            except Exception as e:
+                                logger.warning(f"❌ Error crawling {link}: {e}")
+                                crawled_urls.add(link)  # Mark as crawled to avoid retry
+                                continue
+                        
+                        logger.info(f"📈 Depth {current_depth} completed: {new_pages_found} pages added, {len(all_discovered_links)} total links discovered")
+                        current_depth += 1
+                    
+                    # Summary of crawling based on mode
+                    total_links_discovered = len(all_discovered_links)
+                    total_attempted = len(crawled_urls)
+                    
+                    if comprehensive:
+                        logger.info(f"🎯 COMPREHENSIVE crawl completed:")
+                        logger.info(f"   • Total pages successfully crawled: {len(crawled_pages)}")
+                        logger.info(f"   • Total unique links discovered: {total_links_discovered}")
+                        logger.info(f"   • Total crawl attempts: {total_attempted}")
+                        logger.info(f"   • Maximum depth reached: {current_depth - 1}")
+                        logger.info(f"   • Success rate: {len(crawled_pages)}/{total_attempted} = {100*len(crawled_pages)/max(total_attempted, 1):.1f}%")
+                        logger.info(f"   • Coverage: {100*total_attempted/max(total_links_discovered, 1):.1f}% of discovered links attempted")
+                    else:
+                        logger.info(f"🎯 Selective crawl completed:")
+                        logger.info(f"   • Total pages successfully crawled: {len(crawled_pages)}")
+                        logger.info(f"   • Total unique links discovered: {total_links_discovered}")
+                        logger.info(f"   • High-quality links crawled: {total_attempted}")
+                        logger.info(f"   • Maximum depth reached: {current_depth - 1}")
+                        logger.info(f"   • Success rate: {len(crawled_pages)}/{total_attempted} = {100*len(crawled_pages)/max(total_attempted, 1):.1f}%")
+                    
+
+                
+                else:
+                    logger.error(f"❌ Failed to crawl main page: {main_result.error_message if main_result else 'No result'}")
+                    return []
+            
+
+            return crawled_pages
+        
+        except ImportError as e:
+            logger.error(f"❌ Crawl4AI import error: {e}")
+            return []
+        except Exception as e:
+            logger.error(f"❌ Systematic crawling failed: {e}", exc_info=True)
+            return []
+
+    def _score_url_importance(self, url: str, base_url: str) -> float:
+        """Score URL importance based on structure and content indicators"""
+        score = 1.0
+        url_lower = url.lower()
+        
+        # Skip non-content files completely
+        file_extensions = ['.png', '.jpg', '.jpeg', '.gif', '.svg', '.ico', '.css', '.js', '.pdf', '.zip', '.xml', '.txt']
+        if any(url_lower.endswith(ext) for ext in file_extensions):
+            return 0.0  # Don't crawl asset files
+        
+        # High value pages for alternates.ai specifically
+        high_value_keywords = [
+            'agents', 'tools', 'ai', 'automation', 'solutions', 'features',
+            'pricing', 'about', 'docs', 'documentation', 'guide', 'tutorial', 
+            'api', 'reference', 'blog', 'article', 'news', 'support', 'help', 
+            'faq', 'getting-started', 'overview', 'mcp', 'model', 'claude'
+        ]
+        
+        for keyword in high_value_keywords:
+            if keyword in url_lower:
+                score += 3.0
+                break
+        
+        # Medium value pages
+        medium_value_keywords = [
+            'product', 'service', 'resources', 'download', 'install', 
+            'setup', 'config', 'examples', 'changelog', 'contact', 'team'
+        ]
+        
+        for keyword in medium_value_keywords:
+            if keyword in url_lower:
+                score += 1.5
+                break
+        
+        # Heavy penalty for utility/asset pages
+        low_value_keywords = [
+            'login', 'signup', 'register', 'cart', 'checkout', 'account',
+            'profile', 'admin', 'search', 'tag', 'category', 'author',
+            'icon', 'favicon', 'apple-touch', 'manifest', 'robots'
+        ]
+        
+        for keyword in low_value_keywords:
+            if keyword in url_lower:
+                score -= 5.0  # Heavy penalty
+                break
+        
+        # URL structure scoring
+        path_segments = url.replace(base_url, '').strip('/').split('/')
+        
+        # Root level pages are important
+        if len(path_segments) <= 1 or (len(path_segments) == 2 and path_segments[1] == ''):
+            score += 2.0
+        # Second level pages are also good
+        elif len(path_segments) <= 2:
+            score += 1.5
+        # Deeper pages get less priority
+        elif len(path_segments) > 4:
+            score -= 1.0
+        
+        # Boost pages that look like actual content
+        if any(segment for segment in path_segments if len(segment) > 3 and segment.isalpha()):
+            score += 1.0
+        
+        # Heavy penalty for pagination and query parameters
+        if '?page=' in url or '&page=' in url or '/page/' in url:
+            score -= 3.0
+        
+        if '?' in url and len(url.split('?')[1]) > 10:  # Any query strings
+            score -= 2.0
+        
+        return max(0.1, score)  # Minimum score of 0.1
+
     async def crawl_website(self, base_url: str, max_pages: int = 50) -> List[Dict[str, Any]]:
         """
         Crawl website using Crawl4AI's BestFirstCrawlingStrategy following official best practices.
@@ -806,7 +1109,7 @@ class WebCrawler:
         Implements recommendations from: https://docs.crawl4ai.com/core/deep-crawling/
         """
         try:
-            from crawl4ai import AsyncWebCrawler, CrawlerRunConfig
+            from crawl4ai import AsyncWebCrawler, CrawlerRunConfig, CacheMode
             from crawl4ai.content_scraping_strategy import LXMLWebScrapingStrategy
             from crawl4ai.extraction_strategy import LLMExtractionStrategy
             from crawl4ai.deep_crawling import BestFirstCrawlingStrategy
@@ -823,17 +1126,27 @@ class WebCrawler:
             base_domain = urllib.parse.urlparse(base_url).netloc
             pages = []
 
-            # 1. Create a well-tuned relevance scorer (best practice: experiment with keyword weights)
+            # 1. Create an enhanced relevance scorer with domain-specific keywords
+            # Extract base name from URL for more targeted scoring
+            import urllib.parse
+            parsed_url = urllib.parse.urlparse(base_url)
+            domain_name = parsed_url.netloc.replace('www.', '').split('.')[0]
+            
+            # Enhanced keyword list based on common page types and domain
+            enhanced_keywords = [
+                "documentation", "guide", "tutorial", "api", "reference", 
+                "blog", "article", "news", "feature", "product", "service",
+                "about", "contact", "help", "support", "changelog", "release",
+                "tools", "resources", "pricing", "plans", "download", "install",
+                domain_name  # Add domain name as a relevant keyword
+            ]
+            
             keyword_scorer = KeywordRelevanceScorer(
-                keywords=[
-                    "documentation", "guide", "tutorial", "api", "reference", 
-                    "blog", "article", "news", "feature", "product", "service",
-                    "about", "contact", "help", "support", "changelog", "release"
-                ],
-                weight=0.7  # Recommended weight from docs
+                keywords=enhanced_keywords,
+                weight=1.0  # Increase weight for better scoring
             )
 
-            # 2. Create sophisticated filter chain following best practices
+                        # 2. Create sophisticated filter chain following best practices
             # Note: Using try-catch to handle API differences between Crawl4AI versions
             filter_chain = None
             try:
@@ -842,50 +1155,23 @@ class WebCrawler:
                     # Domain boundaries (essential for focused crawling)
                     DomainFilter(allowed_domains=[base_domain]),
                     
-                    # URL patterns - exclude utility pages (updated API)
-                    URLPatternFilter(
-                        exclude_patterns=[
-                            "*login*", "*signup*", "*register*", "*search*", 
-                            "*cart*", "*checkout*", "*account*", "*profile*",
-                            "*/assets/*", "*/static/*", "*/media/*", "*.pdf",
-                            "*/admin/*", "*/wp-admin/*", "*?format=pdf"
-                        ]
-                    ),
-                    
                     # Content type filtering - use allowed_types as recommended
                     ContentTypeFilter(
                         allowed_types=["text/html", "application/xhtml+xml"]
                     )
                 ])
             except Exception as filter_error:
-                # Try alternative API for URLPatternFilter
+                logger.warning(f"⚠️ Advanced filtering not available: {filter_error}")
+                logger.info("🔧 Using basic domain filtering only")
                 try:
-                    logger.info(f"🔧 Trying alternative URLPatternFilter API...")
                     filter_chain = FilterChain([
-                        DomainFilter(allowed_domains=[base_domain]),
-                        URLPatternFilter(
-                            patterns=[
-                                "*login*", "*signup*", "*register*", "*search*", 
-                                "*cart*", "*checkout*", "*account*", "*profile*",
-                                "*/assets/*", "*/static/*", "*/media/*", "*.pdf",
-                                "*/admin/*", "*/wp-admin/*", "*?format=pdf"
-                            ],
-                            mode="exclude"
-                        ),
-                        ContentTypeFilter(allowed_types=["text/html", "application/xhtml+xml"])
+                        DomainFilter(allowed_domains=[base_domain])
                     ])
-                except Exception as filter_error2:
-                    logger.warning(f"⚠️ Advanced filtering not available: {filter_error2}")
-                    logger.info("🔧 Using basic domain filtering only")
-                    try:
-                        filter_chain = FilterChain([
-                            DomainFilter(allowed_domains=[base_domain])
-                        ])
-                    except:
-                        logger.warning("⚠️ FilterChain not available, proceeding without filters")
-                        filter_chain = None
+                except:
+                    logger.warning("⚠️ FilterChain not available, proceeding without filters")
+                    filter_chain = None
 
-            # 3. Configure BestFirstCrawlingStrategy with best practice limits
+            # 3. Configure BestFirstCrawlingStrategy with supported parameters only
             # Adjust depth based on max_pages for better coverage
             crawl_depth = 4 if max_pages > 100 else 3 if max_pages > 50 else 2
             
@@ -894,31 +1180,19 @@ class WebCrawler:
                 max_pages=max_pages,
                 include_external=False,  # Stay within domain
                 url_scorer=keyword_scorer,
-                filter_chain=filter_chain,
-                # Enable more aggressive discovery
-                ignore_robots_txt=False,  # Respect robots.txt
-                respect_nofollow=True    # Respect nofollow links
-                # Note: BestFirst doesn't need score_threshold as it naturally prioritizes by score
+                filter_chain=filter_chain
+                # Note: ignore_robots_txt and respect_nofollow are not supported parameters
             )
 
-            # 4. Set up crawler configuration with LLM extraction strategy
+            # 4. Set up crawler configuration with only supported parameters
             crawler_config = CrawlerRunConfig(
                 deep_crawl_strategy=deep_crawl_strategy,
                 scraping_strategy=LXMLWebScrapingStrategy(),
-                extraction_strategy=LLMExtractionStrategy(
-                    provider="openai/gpt-4o-mini",
-                    api_token=os.getenv('OPENAI_API_KEY'),
-                    instruction="Extract the main content, title, and key information from this page. Focus on text content and ignore navigation elements."
-                ) if os.getenv('OPENAI_API_KEY') else None,
                 word_count_threshold=50,  # Higher threshold for quality content
                 page_timeout=30000,  # 30 seconds timeout
-                stream=True,  # Best practice: streaming for real-time processing
                 verbose=True,
-                # Additional settings for better crawling
-                bypass_cache=False,  # Use cache for efficiency
-                js_timeout=10000,    # 10 seconds JS timeout
-                wait_for_images=False,  # Don't wait for images to load
-                remove_overlay_elements=True  # Remove popups/overlays
+                cache_mode=CacheMode.ENABLED  # Use cache for efficiency
+                # Note: Removed unsupported parameters: js_timeout, wait_for_images, remove_overlay_elements, stream, extraction_strategy
             )
 
             # 5. Execute the crawl with proper analytics
@@ -1061,6 +1335,100 @@ class WebCrawler:
             title = title.title()
             
         return ' '.join(title.split()).strip()
+
+    def _extract_all_links(self, result, base_url: str, base_domain: str) -> set:
+        """Enhanced link extraction from crawl result using multiple techniques"""
+        discovered_links = set()
+        
+        try:
+            # Method 1: Extract from Crawl4AI's links property
+            if hasattr(result, 'links') and result.links:
+                internal_links = result.links.get('internal', [])
+                for link in internal_links:
+                    if isinstance(link, dict):
+                        link_url = link.get('href') or link.get('url')
+                    else:
+                        link_url = str(link)
+                    
+                    if link_url and base_domain in link_url:
+                        normalized_url = self._normalize_url(link_url)
+                        if normalized_url != base_url:
+                            discovered_links.add(normalized_url)
+            
+            # Method 2: Enhanced HTML link extraction
+            if hasattr(result, 'html') and result.html:
+                import re
+                
+                # Multiple patterns to catch different link formats
+                link_patterns = [
+                    r'href=["\']([^"\']*)["\']',
+                    r'<a[^>]+href=["\']([^"\']+)["\'][^>]*>',
+                    r'window\.location\s*=\s*["\']([^"\']+)["\']',
+                    r'location\.href\s*=\s*["\']([^"\']+)["\']',
+                    r'<link[^>]+href=["\']([^"\']+)["\'][^>]*>'
+                ]
+                
+                found_links = set()
+                for pattern in link_patterns:
+                    matches = re.findall(pattern, result.html, re.IGNORECASE)
+                    found_links.update(matches)
+                
+                # Look for data attributes and JavaScript navigation
+                data_patterns = [
+                    r'data-(?:href|link|url|navigate)=["\']([^"\']*)["\']',
+                    r'data-page=["\']([^"\']*)["\']',
+                    r'onclick=["\'][^"\']*location[^"\']*=[^"\']*["\']([^"\']+)["\']'
+                ]
+                
+                for pattern in data_patterns:
+                    matches = re.findall(pattern, result.html, re.IGNORECASE)
+                    found_links.update(matches)
+                
+                # Process discovered links
+                for link in found_links:
+                    # Skip empty links, fragments, and external protocols
+                    if not link or link.startswith('#') or link.startswith('mailto:') or link.startswith('tel:') or link.startswith('javascript:'):
+                        continue
+                    
+                    # Convert relative links to absolute
+                    if link.startswith('/'):
+                        full_url = f"{base_url.rstrip('/')}{link}"
+                    elif link.startswith('http') and base_domain in link:
+                        full_url = link
+                    elif not link.startswith('http'):  # Relative links
+                        full_url = f"{base_url.rstrip('/')}/{link.lstrip('/')}"
+                    else:
+                        continue
+                    
+                    normalized_url = self._normalize_url(full_url)
+                    if normalized_url != base_url:  # Don't add the same page
+                        discovered_links.add(normalized_url)
+            
+            # Method 3: Extract from markdown content (for navigation menus)
+            if hasattr(result, 'markdown') and result.markdown:
+                markdown_content = result.markdown.raw_markdown or result.markdown.fit_markdown or ""
+                if markdown_content:
+                    import re
+                    # Markdown link pattern: [text](url)
+                    markdown_links = re.findall(r'\[([^\]]+)\]\(([^)]+)\)', markdown_content)
+                    for text, link in markdown_links:
+                        if link and not link.startswith('#'):
+                            if link.startswith('/'):
+                                full_url = f"{base_url.rstrip('/')}{link}"
+                            elif not link.startswith('http'):
+                                full_url = f"{base_url.rstrip('/')}/{link.lstrip('/')}"
+                            else:
+                                full_url = link
+                            
+                            if base_domain in full_url:
+                                normalized_url = self._normalize_url(full_url)
+                                if normalized_url != base_url:
+                                    discovered_links.add(normalized_url)
+        
+        except Exception as e:
+            logger.debug(f"Error extracting links: {e}")
+        
+        return discovered_links
 
 class LLMsTxtGenerator:
     """Main generator class with enhanced export and parallel processing capabilities"""
@@ -1687,7 +2055,9 @@ Cleaned text:"""
                              parallel_workers: int = None,
                              batch_size: int = 10,
                              max_full_text_pages: int = None,
-                             full_text_only: bool = False):
+                             full_text_only: bool = False,
+                             crawl_strategy: str = 'systematic',
+                             safety_limit: int = None):
         """Generate LLMs.txt from a website with enhanced parallel processing and export options"""
         start_time = time.time()
         
@@ -1731,10 +2101,21 @@ Cleaned text:"""
         
         logger.info(f"📊 Configuration: max_pages={actual_max_pages}, format={export_format}, parallel_workers={parallel_workers}")
         
-        # Crawl the website with enhanced page discovery for full content
-        if parallel_workers > 1:
-            pages = await self._crawl_parallel(base_url, actual_max_pages, parallel_workers)
+        # Choose crawling strategy based on parameter and mode
+        if crawl_strategy == 'systematic':
+            if full_text_only:
+                logger.info("🎯 Using COMPREHENSIVE deep crawling strategy (Full Text Mode)")
+                # Calculate safety limit for comprehensive crawling in full text mode
+                calculated_safety_limit = safety_limit or (actual_max_pages * 10)
+                logger.info(f"🛡️ Safety limit set to {calculated_safety_limit} pages for comprehensive crawling")
+                pages = await self.crawler.discover_all_links_first(base_url, actual_max_pages, calculated_safety_limit, comprehensive=True)
+            else:
+                logger.info("🎯 Using systematic discovery-first crawling strategy")
+                # Regular systematic crawling with normal limits
+                logger.info(f"📊 Regular mode: Targeting {actual_max_pages} high-quality pages")
+                pages = await self.crawler.discover_all_links_first(base_url, actual_max_pages, actual_max_pages, comprehensive=False)
         else:
+            logger.info("🌊 Using BestFirst deep crawling strategy")
             pages = await self.crawler.crawl_website(base_url, actual_max_pages)
         
         if not pages:
@@ -2181,6 +2562,12 @@ Examples:
                         help='Number of parallel crawlers to use')
     parser.add_argument('--batch-size', type=int, default=10,
                         help='Batch size for AI processing (default: 10)')
+    parser.add_argument('--crawl-strategy', choices=['systematic', 'bestfirst'], default='systematic',
+                        help='Crawling strategy: systematic (discover all links first) or bestfirst (deep crawling)')
+    parser.add_argument('--safety-limit', type=int, default=None,
+                        help='Maximum total pages to crawl as safety limit (default: 3x max-pages)')
+    parser.add_argument('--force-scoring', action='store_true',
+                        help='Force enable scoring for better prioritization')
     
     # Output options
     parser.add_argument('--format', choices=['text', 'json', 'yaml'], default='text',
@@ -2376,7 +2763,9 @@ Examples:
             parallel_workers=args.parallel_crawl,
             batch_size=args.batch_size,
             max_full_text_pages=args.max_full_pages,
-            full_text_only=args.full_text_only
+            full_text_only=args.full_text_only,
+            crawl_strategy=args.crawl_strategy,
+            safety_limit=args.safety_limit
         ))
         
         print("\n🎉 Generation completed successfully!")
