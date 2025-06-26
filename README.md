@@ -80,6 +80,23 @@ ollama pull phi:2.7b
 
 ## 🚀 Quick Start
 
+> **Important Note on Running the Tool:**
+>
+> The command examples in this README (e.g., `python generate-llmstxt-crawl4ai.py ...`) assume the presence of a script named `generate-llmstxt-crawl4ai.py` in the project's root directory. **This script does not appear to be included in the current repository.**
+>
+> This could be due to a few reasons:
+> *   It might be a helper script that you need to create locally.
+> *   It may have been inadvertently excluded from the repository.
+> *   The primary execution method for this tool might have changed, and this README has not yet been fully updated.
+>
+> If you have this script, the examples below should work as described.
+>
+> If the script is missing, the core logic for generating `llms.txt` files likely resides within the `llmsgen` package, particularly in the `llmsgen.generator` module (potentially in a file that would have been named `llms_generator.py`, though its source also appears to be missing from the repository). You may need to either:
+> 1.  Create a Python wrapper script that imports and calls the main function from `llmsgen.generator`.
+> 2.  Investigate how to directly invoke the intended functionality from the `llmsgen` package modules.
+>
+> The command-line options listed further down are likely still relevant for the tool's underlying functionality.
+
 ### Basic Usage
 ```bash
 # Generate llms.txt for a website
@@ -113,6 +130,8 @@ python generate-llmstxt-crawl4ai.py https://example.com \
 ```
 
 ## 📖 Command Line Options
+
+> **Note:** The commands shown below (and throughout this document) assume you are using the `generate-llmstxt-crawl4ai.py` script. As mentioned in the "Quick Start" section, this script is not found in the repository. If you are invoking the tool's functionality directly from the `llmsgen` package, you will need to adapt how these options are passed. The options themselves are likely still applicable to the core logic.
 
 | Option | Default | Description |
 |--------|---------|-------------|
@@ -258,6 +277,8 @@ Raw HTML → Content Extraction → Text Cleaning → AI Summarization → Categ
 ```
 
 ## 📊 Example Output
+
+> **Note:** The example input command below assumes the `generate-llmstxt-crawl4ai.py` script is available. Please see the note in the "Quick Start" section if this script is missing.
 
 ### Input
 ```bash
