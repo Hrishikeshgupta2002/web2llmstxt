@@ -1,0 +1,9 @@
+# Example.Com
+
+> A comprehensive website offering information and resources on various topics.
+
+Generated from 1 pages on 2025-06-26 using automated crawling.
+
+## General Information
+
+- [Mock Page 1 Title](https://example.com/test_mock_crawl/page1): Content related to Mock Page 1 Title. From example.com.
