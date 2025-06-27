@@ -239,6 +239,46 @@ The SDK supports multiple AI providers:
 - **OpenAI** - gpt-4, gpt-3.5-turbo
 - **Anthropic** - claude-3-sonnet, claude-3-haiku
 
+## 📈 Generative SEO (GEO)
+
+Generative SEO, also known as Generative Engine Optimization (GEO), represents a fundamental shift in SEO strategy. While traditional SEO focuses on optimizing for search engines like Google and Bing, generative SEO targets AI-driven search engines that generate comprehensive, context-rich answers rather than just listing websites.
+
+### Key Differences from Traditional SEO
+
+-   **Targeted Search Engines**: Traditional SEO optimizes for conventional search engines, while generative SEO targets AI-driven platforms like ChatGPT, Perplexity, Google AI Overviews, Gemini, and Copilot.
+-   **Content Approach**: Instead of just tweaking existing content with keywords, generative SEO focuses on creating conversations and content that naturally aligns with evolving search patterns. The emphasis shifts from keyword density to contextual richness, incorporating citations, statistics, and AI-driven insights.
+-   **Success Metrics**: Traditional SEO measures success through click-through rates and time on page, while generative SEO focuses on impression metrics - how often your content appears in AI-generated responses.
+
+### How Generative SEO Works
+
+Generative SEO uses machine learning, user intent analysis, and AI-focused content optimization to improve visibility in AI-generated results. The process involves:
+
+-   **Research and Analysis**: GEO strategy requires understanding how AI interprets content and chooses what to feature in answers. This involves analyzing how users interact with AI platforms and studying natural language patterns across queries.
+-   **Content Quality and Relevance**: In generative AI SEO, relevance carries more weight than keyword repetition because AI models look for value, not volume.
+
+Content that gets featured typically includes:
+
+-   Real problems and solutions to actual user queries
+-   Brand mentions and topical depth to signal authority
+-   Personal experiences that add credibility
+-   Original insights and straightforward explanations
+
+### Benefits of AI and Generative SEO
+
+-   **Scalability**: AI tools speed up content creation and idea generation, making SEO efforts more efficient while requiring human strategy and creativity for meaningful connections.
+-   **Personalization**: AI enables creating content tailored to user needs, preferences, and search intent, increasing engagement and conversions.
+-   **Competitive Edge**: Early adopters of generative SEO strategies gain advantages in achieving higher rankings and visibility.
+-   **Efficiency**: AI automates time-consuming tasks like keyword research, content optimization, and link building, freeing up time for strategic planning.
+
+### Best Practices for Generative SEO
+
+-   **Create High-Quality, Authoritative Content**: Focus on providing genuine value with in-depth articles, tutorials, and guides.
+-   **Structure for Readability**: Use clear headings, bullet points, and short paragraphs to make your content easy for both humans and AI to parse.
+-   **Incorporate Natural Language**: Write in a conversational tone that directly answers user questions.
+-   **Build Topical Authority**: Cover a subject area comprehensively to establish your site as an expert resource.
+-   **Optimize for Featured Snippets**: Target question-based queries and provide concise, direct answers.
+-   **Use Schema Markup**: Implement structured data to help search engines understand the context of your content.
+
 ## 🛠️ Advanced Features
 
 ### Custom Crawling Strategies
@@ -353,6 +393,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## 🤝 Support
 
+- 📚 **Documentation**: [llmsgen.readthedocs.io](https://llmsgen.readthedocs.io/)
 - 🐛 **Bug Reports**: [GitHub Issues](https://github.com/yourusername/llmsgen/issues)
 - 💬 **Discussions**: [GitHub Discussions](https://github.com/yourusername/llmsgen/discussions)
 - 📧 **Email**: hrishikeshgupta007@gmail.com
