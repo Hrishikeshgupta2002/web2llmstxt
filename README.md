@@ -353,7 +353,6 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## 🤝 Support
 
-- 📚 **Documentation**: [llmsgen.readthedocs.io](https://llmsgen.readthedocs.io/)
 - 🐛 **Bug Reports**: [GitHub Issues](https://github.com/yourusername/llmsgen/issues)
 - 💬 **Discussions**: [GitHub Discussions](https://github.com/yourusername/llmsgen/discussions)
 - 📧 **Email**: hrishikeshgupta007@gmail.com
