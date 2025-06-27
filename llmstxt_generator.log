@@ -1,103 +1,24 @@
-2025-06-26 17:22:21,946 - llmsgen - INFO - Sample .env file created at /app/env.example.llmstxt
-2025-06-26 17:22:39,587 - llmsgen - DEBUG - Ollama is not running - no local models available
-2025-06-26 17:23:03,780 - llmsgen - DEBUG - Ollama is not running - no local models available
-2025-06-26 17:25:25,975 - llmsgen - DEBUG - Ollama is not running - no local models available
-2025-06-26 17:25:25,975 - llmsgen - INFO - 🤖 Using DUMMY model for testing pipeline.
-2025-06-26 17:25:25,975 - llmsgen - INFO -
-🚀 Starting generation for https://example.com
-2025-06-26 17:25:25,975 - llmsgen - INFO - 📊 Max pages (llms.txt): 1
-2025-06-26 17:25:25,975 - llmsgen - INFO - 📄 Export Format: text
-2025-06-26 17:25:25,975 - llmsgen - INFO - 📑 Include Full Text: True
-2025-06-26 17:25:25,975 - llmsgen - INFO - 🤖 Using model: Dummy Test Model (ollama)
-2025-06-26 17:25:25,976 - llmsgen - INFO - 🔥 Warming up local model...
-2025-06-26 17:25:25,978 - llmsgen - WARNING - ⚠️  Ollama is not running. Please start Ollama with 'ollama serve'
-2025-06-26 17:25:25,978 - llmsgen - WARNING - ⚠️ Model warm-up failed, continuing...
-2025-06-26 17:25:25,978 - llmsgen - INFO - 🧠 ✅ Model requires ~0.0GB RAM, 7.3GB available
-2025-06-26 17:25:25,978 - llmsgen - INFO - 🌐 Starting crawl: https://example.com, Target: 3 pages, Strategy: systematic
-2025-06-26 17:25:25,978 - llmsgen - INFO - 🛡️ Systematic crawl safety limit: 15 pages
-2025-06-26 17:25:25,978 - llmsgen - INFO - 🚀 Enhanced Crawling for: https://example.com, Target: 3 pages, Comprehensive: True
-2025-06-26 17:25:26,527 - llmsgen - ERROR - ❌ An unexpected error occurred: BrowserType.launch: Executable doesn't exist at /home/jules/.cache/ms-playwright/chromium-1179/chrome-linux/chrome
-╔════════════════════════════════════════════════════════════╗
-║ Looks like Playwright was just installed or updated.       ║
-║ Please run the following command to download new browsers: ║
-║                                                            ║
-║     playwright install                                     ║
-║                                                            ║
-║ <3 Playwright Team                                         ║
-╚════════════════════════════════════════════════════════════╝
-Traceback (most recent call last):
-  File "/app/scripts/generate_llms.py", line 228, in main
-    asyncio.run(generator.generate_llmstxt(
-  File "/home/jules/.pyenv/versions/3.12.11/lib/python3.12/asyncio/runners.py", line 195, in run
-    return runner.run(main)
-           ^^^^^^^^^^^^^^^^
-  File "/home/jules/.pyenv/versions/3.12.11/lib/python3.12/asyncio/runners.py", line 118, in run
-    return self._loop.run_until_complete(task)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/jules/.pyenv/versions/3.12.11/lib/python3.12/asyncio/base_events.py", line 691, in run_until_complete
-    return future.result()
-           ^^^^^^^^^^^^^^^
-  File "/app/llmsgen/generator/llms_generator.py", line 175, in generate_llmstxt
-    pages_data = await self.crawler.discover_all_links_first(base_url, actual_max_pages, calculated_safety_limit, comprehensive=(full_text_only or include_full_text))
-                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/app/llmsgen/crawler/web_crawler.py", line 182, in discover_all_links_first
-    async with AsyncWebCrawler(verbose=True) as crawler:
-               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/jules/.pyenv/versions/3.12.11/lib/python3.12/site-packages/crawl4ai/async_webcrawler.py", line 191, in __aenter__
-    return await self.start()
-           ^^^^^^^^^^^^^^^^^^
-  File "/home/jules/.pyenv/versions/3.12.11/lib/python3.12/site-packages/crawl4ai/async_webcrawler.py", line 174, in start
-    await self.crawler_strategy.__aenter__()
-  File "/home/jules/.pyenv/versions/3.12.11/lib/python3.12/site-packages/crawl4ai/async_crawler_strategy.py", line 111, in __aenter__
-    await self.start()
-  File "/home/jules/.pyenv/versions/3.12.11/lib/python3.12/site-packages/crawl4ai/async_crawler_strategy.py", line 121, in start
-    await self.browser_manager.start()
-  File "/home/jules/.pyenv/versions/3.12.11/lib/python3.12/site-packages/crawl4ai/browser_manager.py", line 614, in start
-    self.browser = await self.playwright.chromium.launch(**browser_args)
-                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/jules/.pyenv/versions/3.12.11/lib/python3.12/site-packages/playwright/async_api/_generated.py", line 14438, in launch
-    await self._impl_obj.launch(
-  File "/home/jules/.pyenv/versions/3.12.11/lib/python3.12/site-packages/playwright/_impl/_browser_type.py", line 98, in launch
-    await self._channel.send(
-  File "/home/jules/.pyenv/versions/3.12.11/lib/python3.12/site-packages/playwright/_impl/_connection.py", line 69, in send
-    return await self._connection.wrap_api_call(
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/jules/.pyenv/versions/3.12.11/lib/python3.12/site-packages/playwright/_impl/_connection.py", line 558, in wrap_api_call
-    raise rewrite_error(error, f"{parsed_st['apiName']}: {error}") from None
-playwright._impl._errors.Error: BrowserType.launch: Executable doesn't exist at /home/jules/.cache/ms-playwright/chromium-1179/chrome-linux/chrome
-╔════════════════════════════════════════════════════════════╗
-║ Looks like Playwright was just installed or updated.       ║
-║ Please run the following command to download new browsers: ║
-║                                                            ║
-║     playwright install                                     ║
-║                                                            ║
-║ <3 Playwright Team                                         ║
-╚════════════════════════════════════════════════════════════╝
-2025-06-26 17:26:28,980 - llmsgen - DEBUG - Ollama is not running - no local models available
-2025-06-26 17:26:28,980 - llmsgen - INFO - 🤖 Using DUMMY model for testing pipeline.
-2025-06-26 17:26:28,980 - llmsgen - INFO -
-🚀 Starting generation for https://example.com/test_mock_crawl
-2025-06-26 17:26:28,980 - llmsgen - INFO - 📊 Max pages (llms.txt): 1
-2025-06-26 17:26:28,980 - llmsgen - INFO - 📄 Export Format: text
-2025-06-26 17:26:28,981 - llmsgen - INFO - 📑 Include Full Text: False
-2025-06-26 17:26:28,981 - llmsgen - INFO - 🤖 Using model: Dummy Test Model (ollama)
-2025-06-26 17:26:28,981 - llmsgen - INFO - 🔥 Warming up local model...
-2025-06-26 17:26:28,984 - llmsgen - WARNING - ⚠️  Ollama is not running. Please start Ollama with 'ollama serve'
-2025-06-26 17:26:28,984 - llmsgen - WARNING - ⚠️ Model warm-up failed, continuing...
-2025-06-26 17:26:28,985 - llmsgen - INFO - 🧠 ✅ Model requires ~0.0GB RAM, 7.3GB available
-2025-06-26 17:26:28,985 - llmsgen - INFO - 🌐 Starting crawl: https://example.com/test_mock_crawl, Target: 1 pages, Strategy: systematic
-2025-06-26 17:26:28,985 - llmsgen - INFO - 🛡️ Systematic crawl safety limit: 5 pages
-2025-06-26 17:26:28,985 - llmsgen - INFO - TESTING MODE: Using mock crawl data for discover_all_links_first.
-2025-06-26 17:26:28,985 - llmsgen - INFO - ✅ Crawled 1 pages.
-2025-06-26 17:26:28,985 - llmsgen - INFO - 🧠 Generating descriptions (or fallbacks)...
-2025-06-26 17:26:28,985 - llmsgen - INFO - 🔧 Optimizing for local model: batch_size=3, workers=2
-2025-06-26 17:26:28,985 - llmsgen - INFO - 📊 Processing 1 pages in batches of 3
-2025-06-26 17:26:28,985 - llmsgen - INFO - 🔄 Processing batch 1/1 (1 pages)
-2025-06-26 17:26:28,986 - llmsgen - INFO - TESTING MODE: Bypassing AI for description generation for Mock Page 1 Title
-2025-06-26 17:26:28,988 - llmsgen - DEBUG - ✅ Generated description for: Mock Page 1 Title...
-2025-06-26 17:26:28,989 - llmsgen - INFO - 📈 Batch 1 done: 1/1 successful.
-2025-06-26 17:26:28,989 - llmsgen - INFO - 🎯 Processing done: 1/1 successful.
-2025-06-26 17:26:28,989 - llmsgen - INFO - 📄 Created llms.txt: ./output/example.com-llms.txt
-2025-06-26 17:26:28,990 - llmsgen - INFO - 🎉 Generation completed in 0.01s
-2025-06-26 17:26:28,990 - llmsgen - INFO -
-🎉 Generation process completed!
+2025-06-27 18:25:29,622 - models.client - INFO - 🔥 Warming up model gemma3:latest...
+2025-06-27 18:25:36,265 - models.client - INFO - ✅ Model gemma3:latest is warmed up and ready
+2025-06-27 18:25:49,624 - generator.llms_generator - INFO - 🚀 Starting llms.txt generation for https://www.alternates.ai/
+2025-06-27 18:25:49,624 - generator.llms_generator - INFO - 📊 Parameters: max_pages=10, format=text, workers=5
+2025-06-27 18:25:49,624 - generator.llms_generator - INFO - 🕷️ Crawling website with normal normal strategy...
+2025-06-27 18:25:56,859 - crawler.web_crawler - INFO - 📄 Normal crawling mode: depth=4, max_pages=20
+2025-06-27 18:26:20,012 - crawler.web_crawler - INFO - 🚀 Starting BestFirst deep crawl on https://www.alternates.ai/
+2025-06-27 18:26:20,012 - crawler.web_crawler - INFO - 📊 Configuration: max_depth=4, max_pages=10
+2025-06-27 18:26:20,013 - crawler.web_crawler - INFO - 🔧 Filters active: Yes
+2025-06-27 18:27:21,025 - crawler.web_crawler - INFO - ✅ [1/20] Depth:1 | Score:0.03 | 892 words | https://www.alternates.ai
+2025-06-27 18:27:21,092 - crawler.web_crawler - INFO - 🔍 Found 8 additional pagination URLs to explore
+2025-06-27 18:27:21,092 - crawler.web_crawler - WARNING - ❌ Failed to crawl https://www.alternates.ai/agents?page=8: None
+2025-06-27 18:27:21,092 - crawler.web_crawler - INFO - 📈 Crawl Analytics:
+2025-06-27 18:27:21,092 - crawler.web_crawler - INFO -    Total pages: 1
+2025-06-27 18:27:21,092 - crawler.web_crawler - INFO -    Average score: 0.03
+2025-06-27 18:27:21,092 - crawler.web_crawler - INFO -    Pages by depth: {1: 1}
+2025-06-27 18:27:21,092 - crawler.web_crawler - INFO - 🎯 BestFirst deep crawl completed. Discovered 1 high-quality pages.
+2025-06-27 18:27:21,232 - generator.llms_generator - INFO - 📄 Found 1 pages to process
+2025-06-27 18:27:21,232 - generator.llms_generator - INFO - 🔄 Processing 1 pages in batches of 10 with 5 workers
+2025-06-27 18:27:21,232 - generator.llms_generator - INFO - 📦 Processing batch 1/1 (1 pages)
+2025-06-27 18:27:27,695 - generator.llms_generator - INFO - ✅ Completed processing 1/1 pages
+2025-06-27 18:27:27,696 - generator.llms_generator - INFO - 📝 Created output\alternates.ai-llms.txt
+2025-06-27 18:27:27,696 - generator.llms_generator - INFO - 📄 Created output\alternates.ai-llms-full.txt
+2025-06-27 18:27:27,696 - generator.llms_generator - INFO - ✅ Generation completed in 98.07 seconds
